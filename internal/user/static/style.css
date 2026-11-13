@@ -742,4 +742,10 @@ footer {
     .table-heading {
         align-items: start
     }
-}
+}/* Field errors and review step */
+.field-message{color:#bd4e52;font-size:11px;line-height:1.5;margin-top:5px}
+.field-message:empty{display:none}
+.field input[aria-invalid="true"],.phone-input:has(input[aria-invalid="true"]){border-color:#d65e62;box-shadow:0 0 0 2px rgba(214,94,98,.1)}
+.review-section{border:1px solid #e6ebf1;border-radius:9px;padding:16px 18px;margin-top:18px}
+.review-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.review-heading h3{margin:0;font-size:13px}.review-edit{border:0;background:transparent;color:#315fce;font:700 11px 'DM Sans',sans-serif;cursor:pointer}.review-row{display:flex;justify-content:space-between;gap:15px;font-size:12px;line-height:1.5;padding:7px 0;color:#8996a7}.review-row strong{color:#263a54;font-weight:600;text-align:right;overflow-wrap:anywhere}
+@media(max-width:550px){.step-line{margin:0 4px}.step b{font-size:9px}.step>span{width:23px;height:23px;flex:none}}

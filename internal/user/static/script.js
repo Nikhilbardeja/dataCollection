@@ -1,247 +1,67 @@
-// No login or session: phone and document details are sent together on submit.
+// Document photographs remain on the device; only text is submitted.
 const API_BASE = '/user';
 const card = document.getElementById('mainCard');
-let phone = '', activeDoc = '', step = 1, documents = [], fields = {}, data = {};
-
-const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
+let phone = '', activeDoc = '', step = 1, documents = [], fields = {}, data = {}, fieldErrors = {};
+const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const errorKey = (doc, field) => `${doc}:${field}`;
 async function api(path, options = {}) {
     let response;
-    try {
-        response = await fetch(API_BASE + path, {
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...(options.headers || {})
-            }
-        });
-    } catch {
-        throw new Error('Cannot reach the server. Please check your connection or try again later.');
-    }
-
-    let body = {};
-    try {
-        body = await response.json();
-    } catch { }
-
+    try { response = await fetch(API_BASE + path, {...options, headers: {'Content-Type':'application/json', ...(options.headers || {})}}); }
+    catch { throw new Error('Cannot reach the server. Please check your connection or try again later.'); }
+    let body = {}; try { body = await response.json(); } catch {}
     if (!response.ok) {
-    const msg = typeof body.error === 'string' ? body.error : (typeof body.message === 'string' ? body.message : '');
-    throw new Error(msg || `Request failed (${response.status}). Please try again.`);
-}
-
+        const error = new Error(body.error || body.message || `Request failed (${response.status}). Please try again.`);
+        error.documentTypeId = body.document_type_id;
+        error.fieldKey = body.field_key;
+        throw error;
+    }
     return body;
 }
-
-const post = (path, payload) => api(path, { method: 'POST', body: JSON.stringify(payload) });
-
+const post = (path, payload) => api(path, {method:'POST', body:JSON.stringify(payload)});
 function setStep(n) {
-    step = n;
-
-    document.querySelectorAll('.step').forEach(el => {
-        let s = +el.dataset.step;
-        el.classList.toggle('current', s === n);
-        el.classList.toggle('done', s < n);
-        el.querySelector('span').textContent = s < n ? 'v' : s;
-    });
-
+    step=n;
+    document.querySelectorAll('.step').forEach(el=>{const s=+el.dataset.step;el.classList.toggle('current',s===n);el.classList.toggle('done',s<n);el.querySelector('span').textContent=s<n?'✓':s;});
     render();
 }
-
-function showError(message) {
-    document.getElementById('error').textContent = message;
+function showError(message) { const el=document.getElementById('error'); if(el) el.textContent=message; }
+function busy(button, state, label) { button.disabled=state; if(label)button.textContent=label; }
+function displayFieldError(docId, key, message) {
+    if (key === 'phone' && !docId) { fieldErrors.phone=message; setStep(1); document.getElementById('phone')?.focus(); return; }
+    const doc=documents.find(d=>d.document_type_id===docId);
+    if (!doc || !doc.fields.some(f=>f.key===key)) { showError(message); return; }
+    fieldErrors[errorKey(docId,key)]=message;
+    activeDoc=docId; setStep(2);
+    [...document.querySelectorAll('[data-field]')].find(input=>input.dataset.field===key)?.focus();
 }
-function highlightFromError(message) {
-    document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
-
-    // 1. Pehle error dikhao, chahe kuch bhi ho - ye sabse important hai
-    showError(message);
-
-    // 2. Ab highlight dhoondho - message ke shuru me document hai kya?
-    let docId = '';
-    let fieldKey = '';
-    for (const d of documents) {
-        if (message.startsWith(d.document_type_id)) {
-            docId = d.document_type_id;
-            // us document ke fields me se kaunsa field message me hai?
-            for (const f of d.fields) {
-                if (message.includes(f.key)) {
-                    fieldKey = f.key;
-                    break;
-                }
-            }
-            break;
-        }
-    }
-    if (!docId) return;
-
-    // 3. Us document pe le jao
-    if (documents.some(d => d.document_type_id === docId)) {
-        activeDoc = docId;
-        render();
-        showError(message); // render() ne #error ko dobara bana diya, isliye phir se dikhao
-    }
-
-    // 4. Us field ko highlight kar do
-    if (fieldKey) {
-        const input = document.querySelector(`[data-field="${fieldKey}"]`);
-        if (input) {
-            input.classList.add('field-error');
-            input.focus();
-        }
-    }
-}
-
-function busy(button, state, label) {
-    button.disabled = state;
-    if (label) button.textContent = label;
-}
-
 function render() {
-    if (step === 1) {
-        card.innerHTML = `<div class="card-kicker">STEP 01 / 03</div><h2>First, your phone number.</h2><p class="card-desc">Enter the number you would like to link to this submission.</p><div class="form-divider"></div><form id="phoneForm"><label class="field-label" for="phone">Phone number</label><div class="phone-input"><span class="prefix">+91</span><input id="phone" inputmode="numeric" maxlength="10" autocomplete="tel-national" placeholder="Enter your 10-digit number" value="${escapeHTML(phone)}" required></div><p class="hint">Enter your number for each submission. No OTP is required.</p><div id="error" class="error" role="alert"></div><button class="primary" type="submit">Continue <span>-&gt;</span></button></form><div class="disclaimer">Your phone number and document details are submitted together.</div>`;
-
-        document.getElementById('phoneForm').onsubmit = async e => {
-            e.preventDefault();
-
-            const v = document.getElementById('phone').value.trim();
-            if (!/^\d{10}$/.test(v)) return showError('Please enter a valid 10-digit phone number.');
-
-            phone = v;
-
-            const btn = e.submitter;
-            busy(btn, true, 'Loading...');
-
-            try {
-                const result = await api('/document-types');
-                console.log(result);
-
-                if (!Array.isArray(result.documents) || !result.documents.length) {
-                    throw new Error('No document types are configured on the server.');
-                }
-
-                const oldData = data;
-                documents = result.documents;
-                fields = {};
-                data = {};
-
-                for (const d of documents) {
-                    fields[d.document_type_id] = d.fields;
-                    data[d.document_type_id] = oldData[d.document_type_id] || {};
-                }
-
-                activeDoc = documents.some(d => d.document_type_id === activeDoc) ? activeDoc : documents[0].document_type_id;
-
-                setStep(2);
-            } catch (err) {
-                showError(err.message);
-                busy(btn, false, 'Continue ->');
-            }
-        };
-
+    if(step===1){
+        card.innerHTML=`<div class="card-kicker">STEP 01 / 04</div><h2>First, your phone number.</h2><p class="card-desc">Enter the number you would like to link to this submission.</p><div class="form-divider"></div><form id="phoneForm" novalidate><label class="field-label" for="phone">Phone number</label><div class="phone-input"><span class="prefix">+91</span><input id="phone" inputmode="numeric" maxlength="10" autocomplete="tel-national" placeholder="Enter your 10-digit number" value="${escapeHTML(phone)}" aria-describedby="phone-error" ${fieldErrors.phone?'aria-invalid="true"':''}></div><div class="field-message" id="phone-error" role="alert">${escapeHTML(fieldErrors.phone||'')}</div><p class="hint">Enter your number for each submission. No OTP is required.</p><div id="error" class="error" role="alert"></div><button class="primary" type="submit">Continue <span>→</span></button></form><div class="disclaimer">Your phone number and document details are submitted together.</div>`;
+        document.getElementById('phone').oninput=()=>{delete fieldErrors.phone;document.getElementById('phone-error').textContent='';document.getElementById('phone').removeAttribute('aria-invalid');};
+        document.getElementById('phoneForm').onsubmit=async e=>{e.preventDefault();phone=document.getElementById('phone').value.trim();if(!/^\d{10}$/.test(phone))return displayFieldError('', 'phone', 'Please enter a valid 10-digit phone number.');const btn=e.submitter||document.querySelector('#phoneForm button[type=submit]');busy(btn,true,'Loading...');try{const result=await api('/document-types');if(!Array.isArray(result.documents)||!result.documents.length)throw new Error('No document types are configured on the server.');const old=data;documents=result.documents;fields={};data={};for(const d of documents){fields[d.document_type_id]=d.fields;data[d.document_type_id]=old[d.document_type_id]||{}}activeDoc=documents.some(d=>d.document_type_id===activeDoc)?activeDoc:documents[0].document_type_id;setStep(2)}catch(err){showError(err.message);busy(btn,false,'Continue →')}};
         return;
     }
-
-    if (step === 3) {
-        card.innerHTML = `<div class="success"><div class="success-icon">v</div><h2>Submitted successfully.</h2><p>Your details have been submitted. For your privacy, you cannot view your submission here again.</p><button class="outline" id="restart">Start a new submission</button></div>`;
-
-        document.getElementById('restart').onclick = () => {
-            phone = '';
-            documents = [];
-            fields = {};
-            data = {};
-            setStep(1);
-        };
-
+    if(step===4){card.innerHTML=`<div class="success"><div class="success-icon">✓</div><h2>Submitted successfully.</h2><p>Your details have been submitted. For your privacy, you cannot view your submission here again.</p><button class="outline" id="restart">Start a new submission</button></div>`;document.getElementById('restart').onclick=()=>{phone='';documents=[];fields={};data={};fieldErrors={};setStep(1)};return;}
+    if(step===3){
+        const included=documents.filter(d=>d.required||Object.values(data[d.document_type_id]).some(v=>v.trim()));
+        card.innerHTML=`<div class="card-kicker">STEP 03 / 04</div><h2>Review your details.</h2><p class="card-desc">Check your phone number and document details before submitting.</p><div class="review-section"><div class="review-heading"><h3>Phone number</h3><button class="review-edit" id="editPhone">Edit</button></div><div class="review-row"><span>Mobile number</span><strong>+91 ${escapeHTML(phone)}</strong></div></div>${included.map(d=>`<div class="review-section"><div class="review-heading"><h3>${escapeHTML(d.name)}</h3><button class="review-edit" data-edit-doc="${escapeHTML(d.document_type_id)}">Edit</button></div>${d.fields.filter(f=>data[d.document_type_id][f.key]?.trim()).map(f=>`<div class="review-row"><span>${escapeHTML(f.label)}</span><strong>${escapeHTML(data[d.document_type_id][f.key])}</strong></div>`).join('')}</div>`).join('')}<div id="error" class="error" role="alert"></div><div class="action-row"><button class="primary" id="confirm">Confirm & submit <span>→</span></button><button class="outline" id="editDetails">← Edit details</button></div><div class="disclaimer">Please confirm your details are correct. They cannot be viewed here after submission.</div>`;
+        document.getElementById('editPhone').onclick=()=>setStep(1);
+        document.getElementById('editDetails').onclick=()=>setStep(2);
+        document.querySelectorAll('[data-edit-doc]').forEach(b=>b.onclick=()=>{activeDoc=b.dataset.editDoc;setStep(2)});
+        document.getElementById('confirm').onclick=async e=>{const btn=e.currentTarget;busy(btn,true,'Submitting...');const payload={phone,documents:included.map(d=>({document_type_id:d.document_type_id,fields:data[d.document_type_id]}))};try{await post('/submissions',payload);phone='';data={};fields={};documents=[];fieldErrors={};setStep(4)}catch(err){if(err.fieldKey){displayFieldError(err.documentTypeId||'',err.fieldKey,err.message);}else showError(err.message);if(btn.isConnected)busy(btn,false,'Confirm & submit →')}};
         return;
     }
-
-    const doc = documents.find(d => d.document_type_id === activeDoc);
-    if (!doc) return;
-
-    card.innerHTML = `<div class="card-kicker">STEP 02 / 03</div><h2>Add your identity details.</h2><p class="card-desc">Choose a document and enter its details. Add the optional documents you have.</p><div class="doc-tabs">${documents.map(d => `<button type="button" class="doc-tab ${d.document_type_id === activeDoc ? 'active' : ''}" data-doc="${escapeHTML(d.document_type_id)}">${escapeHTML(d.name)} ${d.required ? '<span class="required">*</span>' : ''} ${Object.values(data[d.document_type_id]).some(Boolean) ? 'v' : ''}</button>`).join('')}</div><div class="form-divider"></div><div class="table-heading"><div><h2>${escapeHTML(doc.name)}</h2><p class="card-desc">${doc.required ? 'Required for submission' : 'Optional document'}</p></div><button class="outline" id="scan" type="button">Scan with camera</button></div><p class="hint">Scan on your device or type your details. Check extracted text before submitting.</p><div class="fields">${doc.fields.map(f => `<div class="field ${f.key === 'name' ? 'full' : ''}"><label class="field-label" for="field-${escapeHTML(f.key)}">${escapeHTML(f.label)} ${f.required ? '<span class="required">*</span>' : ''}</label><input id="field-${escapeHTML(f.key)}" data-field="${escapeHTML(f.key)}" type="${f.type === 'date' ? 'date' : 'text'}" placeholder="Enter ${escapeHTML(f.label.toLowerCase())}" value="${escapeHTML(data[activeDoc][f.key] || '')}"></div>`).join('')}</div><div id="error" class="error" role="alert"></div><div class="action-row"><button class="primary" id="submit">Submit details <span>-&gt;</span></button><button class="outline" id="back">&lt;- &nbsp; Change number</button></div><div class="disclaimer">Only text details are sent. Your document photo stays on this device.</div>`;
-
-    document.querySelectorAll('[data-field]').forEach(x => x.addEventListener('input', () => data[activeDoc][x.dataset.field] = x.value));
-    document.querySelectorAll('[data-doc]').forEach(x => x.onclick = () => { activeDoc = x.dataset.doc; render(); });
-    document.getElementById('back').onclick = () => setStep(1);
-    document.getElementById('scan').onclick = openScanner;
-
-    document.getElementById('submit').onclick = async e => {
-    for (const d of documents) {
-        const values = data[d.document_type_id];
-        const included = d.required || Object.values(values).some(v => v.trim());
-        if (!included) continue;
-
-        for (const f of d.fields) {
-            const val = (values[f.key] || '').trim();
-
-            // 1. Required check - pehle wala hi
-            if (f.required && !val) {
-                activeDoc = d.document_type_id;
-                render();
-                document.querySelector(`[data-field="${f.key}"]`)?.classList.add('field-error');
-                return showError(`Please complete ${f.label} in ${d.name}.`);
-            }
-            if (!val) continue;
-
-            // 2. Pattern check - Backend wala hi pattern, frontend me
-            if (f.pattern) {
-                try {
-                    if (!new RegExp(f.pattern).test(val)) {
-                        activeDoc = d.document_type_id;
-                        render();
-                        document.querySelector(`[data-field="${f.key}"]`)?.classList.add('field-error');
-                        return showError(`${f.label} ka format galat hai in ${d.name}.`);
-                    }
-                } catch { /* agar pattern galat hua to backend sambhal lega */ }
-            }
-
-            // 3. Date + NotFuture check
-            if (f.type === 'date') {
-                const parsed = new Date(val);
-                if (isNaN(parsed)) {
-                    activeDoc = d.document_type_id;
-                    render();
-                    return showError(`${f.label} ki date galat hai in ${d.name}.`);
-                }
-                if (f.not_future) {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    if (parsed > today) {
-                        activeDoc = d.document_type_id;
-                        render();
-                        document.querySelector(`[data-field="${f.key}"]`)?.classList.add('field-error');
-                        return showError(`${f.label} future ki date nahi ho sakti in ${d.name}.`);
-                    }
-                }
-            }
-        }
-    }
-
-        const payload = {
-            phone,
-            documents: documents
-                .filter(d => d.required || Object.values(data[d.document_type_id]).some(v => v.trim()))
-                .map(d => ({ document_type_id: d.document_type_id, fields: data[d.document_type_id] }))
-        };
-
-        let btn = e.currentTarget;
-        busy(btn, true, 'Submitting...');
-
-        try {
-            await post('/submissions', payload);
-            data = {};
-            fields = {};
-            documents = [];
-            setStep(3);
-        } catch (err) {
-            highlightFromError(err.message);
-            busy(btn, false, 'Submit details ->');
-        }
+    const doc=documents.find(d=>d.document_type_id===activeDoc);if(!doc)return;
+    card.innerHTML=`<div class="card-kicker">STEP 02 / 04</div><h2>Add your identity details.</h2><p class="card-desc">Choose a document and enter its details. Add the optional documents you have.</p><div class="doc-tabs">${documents.map(d=>`<button type="button" class="doc-tab ${d.document_type_id===activeDoc?'active':''}" data-doc="${escapeHTML(d.document_type_id)}">${escapeHTML(d.name)} ${d.required?'<span class="required">*</span>':''} ${Object.values(data[d.document_type_id]).some(Boolean)?'✓':''}</button>`).join('')}</div><div class="form-divider"></div><div class="table-heading"><div><h2>${escapeHTML(doc.name)}</h2><p class="card-desc">${doc.required?'Required for submission':'Optional document'}</p></div><button class="outline" id="scan" type="button">Scan with camera</button></div><p class="hint">Scan on your device or type your details. Check extracted text before submitting.</p><div class="fields">${doc.fields.map((f,i)=>{const message=fieldErrors[errorKey(activeDoc,f.key)]||'';return `<div class="field ${f.key==='name'?'full':''}"><label class="field-label" for="field-${i}">${escapeHTML(f.label)} ${f.required?'<span class="required">*</span>':''}</label><input id="field-${i}" data-field="${escapeHTML(f.key)}" type="${f.type==='date'?'date':'text'}" placeholder="Enter ${escapeHTML(f.label.toLowerCase())}" value="${escapeHTML(data[activeDoc][f.key]||'')}" aria-describedby="field-error-${i}" ${message?'aria-invalid="true" class="field-error"':''}><div class="field-message" id="field-error-${i}" role="alert">${escapeHTML(message)}</div></div>`}).join('')}</div><div id="error" class="error" role="alert"></div><div class="action-row"><button class="primary" id="review">Review details <span>→</span></button><button class="outline" id="back">← Change number</button></div><div class="disclaimer">Only text details are sent. Your document photo stays on this device.</div>`;
+    document.querySelectorAll('[data-field]').forEach(x=>x.addEventListener('input',()=>{data[activeDoc][x.dataset.field]=x.value;delete fieldErrors[errorKey(activeDoc,x.dataset.field)];x.classList.remove('field-error');x.removeAttribute('aria-invalid');document.getElementById(x.getAttribute('aria-describedby')).textContent='';}));
+    document.querySelectorAll('[data-doc]').forEach(x=>x.onclick=()=>{activeDoc=x.dataset.doc;render()});
+    document.getElementById('back').onclick=()=>setStep(1);
+    document.getElementById('scan').onclick=openScanner;
+    document.getElementById('review').onclick=()=>{
+        for(const d of documents){const values=data[d.document_type_id];if(!d.required&&!Object.values(values).some(v=>v.trim()))continue;for(const f of d.fields){const val=(values[f.key]||'').trim();if(f.required&&!val)return displayFieldError(d.document_type_id,f.key,`${f.label} is required.`);if(!val)continue;if(f.pattern){try{if(!new RegExp(f.pattern).test(val))return displayFieldError(d.document_type_id,f.key,`Please enter a valid ${f.label}.`);}catch{/* The server validates unsupported patterns. */}}if(f.type==='date'){const valid=/^\d{4}-\d{2}-\d{2}$/.test(val)&&!isNaN(Date.parse(val))&&new Date(val+'T00:00:00Z').toISOString().slice(0,10)===val;if(!valid)return displayFieldError(d.document_type_id,f.key,'Please enter a valid date.');const today=new Date();const localToday=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');if(f.not_future&&val>localToday)return displayFieldError(d.document_type_id,f.key,`${f.label} cannot be in the future.`);}}}
+        setStep(3);
     };
 }
-
 render();
-
 let scannerStream = null, ocrWorker = null;
 
 async function openScanner() {
