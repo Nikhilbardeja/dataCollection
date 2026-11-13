@@ -62,7 +62,7 @@ func (imc *inMemoryCache) LoadDocumentsFormat() error {
 		return err
 	}
 
-	// Lock laga ke update karo, taaki padhte time koi gadbad na ho
+	// Lock while updating the cache to protect concurrent readers.
 	imc.mu.Lock()
 	defer imc.mu.Unlock()
 	imc.DocumentsFormat = result

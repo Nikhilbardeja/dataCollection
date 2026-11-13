@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Cache wala format - DB se aata hai
+// Document configuration loaded from the database cache.
 type DocFields struct {
 	Key       string `json:"key"`
 	Label     string `json:"label"`
@@ -33,25 +33,30 @@ type DocsFormat struct {
 	DocumentTypes []Docs `json:"documents"`
 }
 
-// Frontend se aane wala data
+// Submission payload received from the frontend.
 type SubmitDoc struct {
 	DocumentTypeID string            `json:"document_type_id"`
 	Fields         map[string]string `json:"fields"`
 }
 
 type SubmitRequest struct {
-	Phone     string      `json:"phone" binding:"required,len=10"`
+	Phone     string      `json:"phone"`
 	Documents []SubmitDoc `json:"documents" binding:"required,min=1"`
 }
 
 func SubmitDocuments(c *gin.Context) {
 	var req SubmitRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": "galat format: " + err.Error()})
+		c.JSON(400, gin.H{"error": "Invalid request format. Check the phone number and documents."})
 		return
 	}
 
-	// 1. Cache se required format nikalo
+	if !regexp.MustCompile(`^[0-9]{10}$`).MatchString(req.Phone) {
+		c.JSON(400, gin.H{"error": "Enter a valid 10-digit phone number.", "field_key": "phone"})
+		return
+	}
+
+	// Load the document configuration from the cache.
 	requiredFormat := utils.GetIMCache().GetDocumentsFormat()
 	if len(requiredFormat) == 0 {
 		c.JSON(500, gin.H{"error": "Internal server error"})
@@ -60,15 +65,15 @@ func SubmitDocuments(c *gin.Context) {
 
 	var format DocsFormat
 	if err := json.Unmarshal(requiredFormat, &format); err != nil {
-		c.JSON(500, gin.H{"error": "cache corrupt"})
+		c.JSON(500, gin.H{"error": "Invalid document configuration"})
 		return
 	}
 
-	// 2. Validation - Cache wale Docs ko Frontend wale SubmitDoc se match karana
+	// Validate submitted documents against the cached configuration.
 	seen := make(map[string]bool)
 
 	for _, reqDoc := range req.Documents {
-		// 2a. Ye document cache me hai kya?
+		// Check whether the document type is configured.
 		var cachedDoc *Docs
 		for i := range format.DocumentTypes {
 			if format.DocumentTypes[i].DocumentTypeID == reqDoc.DocumentTypeID {
@@ -81,14 +86,14 @@ func SubmitDocuments(c *gin.Context) {
 			return
 		}
 
-		// 2b. Duplicate to nahi hai?
+		// Reject duplicate document types.
 		if seen[reqDoc.DocumentTypeID] {
 			c.JSON(400, gin.H{"error": "duplicate document: " + reqDoc.DocumentTypeID})
 			return
 		}
 		seen[reqDoc.DocumentTypeID] = true
 
-		// 2c. Frontend ne extra field to nahi bheja?
+		// Reject unknown fields.
 		for k := range reqDoc.Fields {
 			found := false
 			for _, f := range cachedDoc.Fields {
@@ -98,17 +103,16 @@ func SubmitDocuments(c *gin.Context) {
 				}
 			}
 			if !found {
-				c.JSON(400, gin.H{"error": cachedDoc.DocumentTypeID + " me unknown field: " + k})
+				c.JSON(400, gin.H{"error": "Unknown field: " + k, "document_type_id": cachedDoc.DocumentTypeID, "field_key": k})
 				return
 			}
 		}
 
-		// 2d. Cache wala required field frontend ne bheja ya nahi?
-		// 2d. Cache wala required field frontend ne bheja ya nahi?
+		// Validate required fields and values.
 		for _, f := range cachedDoc.Fields {
 			val, exists := reqDoc.Fields[f.Key]
 			if f.Required && (!exists || val == "") {
-				c.JSON(400, gin.H{"error": cachedDoc.DocumentTypeID + " me required field missing: " + f.Key})
+				c.JSON(400, gin.H{"error": f.Label + " is required.", "document_type_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
 				return
 			}
 			if !exists || val == "" {
@@ -118,7 +122,7 @@ func SubmitDocuments(c *gin.Context) {
 			// required pattern check
 			if f.Pattern != "" {
 				if matched, _ := regexp.MatchString(f.Pattern, val); !matched {
-					c.JSON(400, gin.H{"error": cachedDoc.DocumentTypeID + " me " + f.Key + " ka format galat hai"})
+					c.JSON(400, gin.H{"error": "Please enter a valid " + f.Label + ".", "document_type_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
 					return
 				}
 			}
@@ -127,18 +131,18 @@ func SubmitDocuments(c *gin.Context) {
 			if f.Type == "date" {
 				parsed, err := time.Parse("2006-01-02", val)
 				if err != nil {
-					c.JSON(400, gin.H{"error": cachedDoc.DocumentTypeID + " me " + f.Key + " date format galat hai, YYYY-MM-DD me bhejo"})
+					c.JSON(400, gin.H{"error": "Enter a valid date in YYYY-MM-DD format.", "document_type_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
 					return
 				}
 				if f.NotFuture && parsed.After(time.Now()) {
-					c.JSON(400, gin.H{"error": cachedDoc.DocumentTypeID + " me " + f.Key + " future ki date nahi ho sakti"})
+					c.JSON(400, gin.H{"error": f.Label + " cannot be in the future.", "document_type_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
 					return
 				}
 			}
 		}
 	}
 
-	// 2e. Jo document required tha wo aaya bhi hai?
+	// Check that every required document is included.
 	for _, d := range format.DocumentTypes {
 		if d.Required && !seen[d.DocumentTypeID] {
 			c.JSON(400, gin.H{"error": "required document missing: " + d.DocumentTypeID})
@@ -146,7 +150,7 @@ func SubmitDocuments(c *gin.Context) {
 		}
 	}
 
-	// 3. Sab valid hai, ab save karo
+	// Store the validated submission in a transaction.
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
 	defer cancel()
 
@@ -157,18 +161,18 @@ func SubmitDocuments(c *gin.Context) {
 	}
 	defer tx.Rollback(ctx)
 
-	// 3a. Ek hi submission banegi pure request ke liye
+	// Create one submission for the entire request.
 	var submissionId int64
 	err = tx.QueryRow(ctx,
 		"INSERT INTO submissions (phone) VALUES ($1) RETURNING submissionId",
 		req.Phone,
 	).Scan(&submissionId)
 	if err != nil {
-		c.JSON(500, gin.H{"error": "save nahi hua"})
+		c.JSON(500, gin.H{"error": "Unable to save submission"})
 		return
 	}
 
-	// 3b. Har document ke har field ko submission_values me daal do
+	// Save each document field under the submission.
 	for _, doc := range req.Documents {
 		for k, v := range doc.Fields {
 			_, err = tx.Exec(ctx,
@@ -176,14 +180,14 @@ func SubmitDocuments(c *gin.Context) {
 				submissionId, doc.DocumentTypeID, k, v,
 			)
 			if err != nil {
-				c.JSON(500, gin.H{"error": "save nahi hua: " + err.Error()})
+				c.JSON(500, gin.H{"error": "Unable to save submission"})
 				return
 			}
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		c.JSON(500, gin.H{"error": "save nahi hua"})
+		c.JSON(500, gin.H{"error": "Unable to save submission"})
 		return
 	}
 

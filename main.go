@@ -18,7 +18,7 @@ func main() {
 	config.InitDB()
 
 	if err := utils.GetIMCache().LoadDocumentsFormat(); err != nil {
-		log.Fatalf("Cache load nahi hua: %v", err)
+		log.Fatalf("Failed to load cache: %v", err)
 	}
 	log.Println("Cache loaded")
 
