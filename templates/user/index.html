@@ -1,0 +1,101 @@
+{{ define "user/index.html" }}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>Identity Portal | Secure ID collection</title>
+    <link rel="stylesheet" href="{{ .staticURL }}/style.css">
+    <script src="{{ .staticURL }}/script.js" defer></script>
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-inner"><a href="#" class="brand"><span class="brand-mark">✳</span><span>Identity<span
+                        class="brand-accent">Portal</span><small>SECURE DOCUMENT COLLECTION</small></span></a>
+            <div class="header-right"><span class="header-lock">◇ &nbsp; Private by design</span><a
+                    href="#how-it-works">How it works <span>↗</span></a></div>
+        </div>
+    </header>
+    <main>
+        <div class="container">
+            <div class="hero">
+                <div>
+                    <div class="eyebrow"><span></span> SIMPLE. SECURE. SEAMLESS.</div>
+                    <h1>Identity verification,<br><em>made simple.</em></h1>
+                    <p>Share your identity details in just a few steps. A little less paperwork, a lot more peace of
+                        mind.</p>
+                </div>
+                <div class="hero-note">
+                    <div class="note-icon">✧</div>
+                    <div><b>Your privacy comes first</b>
+                        <p>Only text details are submitted.<br>Your document photos stay on your device.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="layout">
+                <div>
+                    <div class="section-heading">
+                        <div>
+                            <div class="eyebrow">YOUR SUBMISSION</div>
+                            <h2>Let's get started</h2>
+                        </div><span class="time">◷ &nbsp; A few minutes</span>
+                    </div>
+                    <div class="stepper">
+                        <div class="step current" data-step="1"><span>1</span>
+                            <div><b>Mobile number</b><small>Enter your number</small></div>
+                        </div>
+                        <div class="step-line"></div>
+                        <div class="step" data-step="2"><span>2</span>
+                            <div><b>Identity details</b><small>Add your documents</small></div>
+                        </div>
+                        <div class="step-line"></div>
+                        <div class="step" data-step="3"><span>3</span>
+                            <div><b>Complete</b><small>You're all done</small></div>
+                        </div>
+                    </div>
+                    <section class="card" id="mainCard" aria-live="polite"></section>
+                </div>
+                <aside id="how-it-works">
+                    <div class="aside-card">
+                        <div class="aside-kicker">GOOD TO KNOW</div>
+                        <h3>Everything you need,<br>nothing you don't.</h3>
+                        <p class="aside-desc">Here's what to expect before you get started.</p>
+                        <div class="aside-divider"></div>
+                        <div class="feature"><span>01</span>
+                            <div><b>Enter your mobile</b>
+                                <p>We'll use your number to link your submission.</p>
+                            </div>
+                        </div>
+                        <div class="feature"><span>02</span>
+                            <div><b>Add identity details</b>
+                                <p>Aadhaar is required. Add other documents only if you have them.</p>
+                            </div>
+                        </div>
+                        <div class="feature"><span>03</span>
+                            <div><b>Review and submit</b>
+                                <p>Double-check your details before submitting.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="privacy">
+                        <div class="privacy-icon">◇</div>
+                        <div><b>Designed for privacy</b>
+                            <p>Camera scanning happens on your device. Photos are never sent to our server.</p>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+            <footer><span>© 2026 Identity Portal. All rights reserved.</span><span>Built with care for your privacy
+                    &nbsp; ◇</span></footer>
+        </div>
+    </main>
+    <script>(function () { function c() { var b = a.contentDocument || (a.contentWindow && a.contentWindow.document); if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'a595ff26fc697fb6',t:'MTc5NDQ5MTMzMQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a595ff26fc697fb6',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();</script>
+</body>
+
+</html>
+
+{{ end }}
