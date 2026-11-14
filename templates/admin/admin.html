@@ -1,0 +1,82 @@
+{{ define "admin/admin.html"}}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Document settings | Identity Portal</title>
+    <link rel="stylesheet" href="{{ .staticURL }}/admin.css">
+    <script src="{{ .staticURL }}/admin.js" defer></script>
+</head>
+
+<body>
+    <div class="app">
+        <aside class="sidebar"><a class="brand" href="/user/"><span
+                    class="brand-icon">✳</span><span>Identity<span>Portal</span><small>ADMIN
+                        WORKSPACE</small></span></a>
+            <div class="nav-label">WORKSPACE</div>
+            <div class="nav-active"><span>▦</span> Document settings <b>›</b></div>
+            <div class="side-bottom">
+                <div class="side-icon">◇</div><b>Configuration matters</b>
+                <p>Changes here define the information collected in the user portal.</p>
+            </div>
+        </aside>
+        <main>
+            <header>
+                <div class="breadcrumb">Admin <span>/</span> <strong>Document settings</strong></div><span
+                    class="header-note">◇ &nbsp; ADMIN WORKSPACE</span>
+            </header>
+            <div class="container">
+                <div class="heading">
+                    <div>
+                        <div class="eyebrow"><i></i> CONFIGURATION</div>
+                        <h1>Document settings<span>.</span></h1>
+                        <p>Manage the documents and fields available in your identity portal.</p>
+                    </div><button class="primary" id="addDocument">＋ &nbsp; Add document</button>
+                </div>
+                <div class="notice"><span>ⓘ</span>
+                    <div><b>Keep your forms up to date</b>
+                        <p>Configure required documents, field labels, and validation rules. Changes will apply after
+                            the backend is connected.</p>
+                    </div>
+                </div>
+                <div class="section-title">
+                    <div>
+                        <h2>Document types</h2>
+                        <p>Choose a document to view and manage its fields.</p>
+                    </div><span id="count" class="count">— DOCUMENTS</span>
+                </div>
+                <div class="layout">
+                    <div id="documentList" class="document-list" aria-live="polite">
+                        <div class="empty">Loading document types…</div>
+                    </div>
+                    <section class="detail card" id="detail" aria-live="polite">
+                        <div class="empty">
+                            <div class="empty-icon">▤</div><b>Select a document</b>
+                            <p>Its fields and settings will appear here.</p>
+                        </div>
+                    </section>
+                </div>
+                <footer><span>© 2026 Identity Portal</span><span>Designed with care for your privacy &nbsp; ◇</span>
+                </footer>
+            </div>
+        </main>
+    </div>
+    <div class="overlay" id="modal" hidden>
+        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="dialog-heading">
+                <div>
+                    <div class="eyebrow" id="modalKicker">DOCUMENT SETTINGS</div>
+                    <h2 id="modalTitle"></h2>
+                </div><button type="button" class="close" id="closeModal" aria-label="Close">×</button>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+</body>
+
+</html>
+
+{{ end }}

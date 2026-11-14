@@ -10,15 +10,15 @@ import (
 )
 
 func getDataByDate(c *gin.Context) {
-	date := c.Query("date") // jaise ?date=2026-11-13
+	date := c.Query("date") // Example: ?date=2026-11-13
 	if date == "" {
-		c.JSON(400, gin.H{"error": "date query param chahiye, jaise ?date=2026-11-13"})
+		c.JSON(400, gin.H{"error": "The date query parameter is required, e.g. ?date=2026-11-13"})
 		return
 	}
 
-	// date sahi format me hai ya nahi
+	// Validate the date format.
 	if _, err := time.Parse("2006-01-02", date); err != nil {
-		c.JSON(400, gin.H{"error": "date format galat hai, YYYY-MM-DD me bhejo"})
+		c.JSON(400, gin.H{"error": "Invalid date format; use YYYY-MM-DD"})
 		return
 	}
 
@@ -38,16 +38,16 @@ func getDataByDate(c *gin.Context) {
 						'documents', COALESCE((
 							SELECT json_agg(
 								json_build_object(
-									'document_type_id', d.document_type_id,
+									'document_id', d.document_id,
 									'fields', d.fields
 								)
 							)
 							FROM (
-								SELECT document_type_id,
+								SELECT document_id,
 									   json_object_agg(field_key, field_value) AS fields
 								FROM submission_values
 								WHERE submissionId = s.submissionId
-								GROUP BY document_type_id
+								GROUP BY document_id
 							) d
 						), '[]'::json)
 					)

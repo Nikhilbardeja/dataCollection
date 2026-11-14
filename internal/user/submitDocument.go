@@ -2,8 +2,9 @@ package user
 
 import (
 	"context"
+	utils "dataCollection/internal/cache"
 	"dataCollection/internal/config"
-	"dataCollection/internal/utils"
+	"dataCollection/internal/models"
 	"encoding/json"
 
 	"regexp"
@@ -12,30 +13,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Document configuration loaded from the database cache.
-type DocFields struct {
-	Key       string `json:"key"`
-	Label     string `json:"label"`
-	Type      string `json:"type"`
-	Required  bool   `json:"required"`
-	Pattern   string `json:"pattern"`
-	NotFuture bool   `json:"not_future"`
-}
-
-type Docs struct {
-	DocumentTypeID string      `json:"document_type_id"`
-	Name           string      `json:"name"`
-	Required       bool        `json:"required"`
-	Fields         []DocFields `json:"fields"`
-}
-
-type DocsFormat struct {
-	DocumentTypes []Docs `json:"documents"`
-}
-
 // Submission payload received from the frontend.
 type SubmitDoc struct {
-	DocumentTypeID string            `json:"document_type_id"`
+	DocumentTypeID string            `json:"document_id"`
 	Fields         map[string]string `json:"fields"`
 }
 
@@ -57,13 +37,13 @@ func SubmitDocuments(c *gin.Context) {
 	}
 
 	// Load the document configuration from the cache.
-	requiredFormat := utils.GetIMCache().GetDocumentsFormat()
+	requiredFormat := utils.GetIMCache().GetDocuments()
 	if len(requiredFormat) == 0 {
 		c.JSON(500, gin.H{"error": "Internal server error"})
 		return
 	}
 
-	var format DocsFormat
+	var format models.DocsFormat
 	if err := json.Unmarshal(requiredFormat, &format); err != nil {
 		c.JSON(500, gin.H{"error": "Invalid document configuration"})
 		return
@@ -74,10 +54,10 @@ func SubmitDocuments(c *gin.Context) {
 
 	for _, reqDoc := range req.Documents {
 		// Check whether the document type is configured.
-		var cachedDoc *Docs
-		for i := range format.DocumentTypes {
-			if format.DocumentTypes[i].DocumentTypeID == reqDoc.DocumentTypeID {
-				cachedDoc = &format.DocumentTypes[i]
+		var cachedDoc *models.Docs
+		for i := range format.Documents {
+			if format.Documents[i].DocumentTypeID == reqDoc.DocumentTypeID {
+				cachedDoc = &format.Documents[i]
 				break
 			}
 		}
@@ -103,7 +83,7 @@ func SubmitDocuments(c *gin.Context) {
 				}
 			}
 			if !found {
-				c.JSON(400, gin.H{"error": "Unknown field: " + k, "document_type_id": cachedDoc.DocumentTypeID, "field_key": k})
+				c.JSON(400, gin.H{"error": "Unknown field: " + k, "document_id": cachedDoc.DocumentTypeID, "field_key": k})
 				return
 			}
 		}
@@ -112,7 +92,7 @@ func SubmitDocuments(c *gin.Context) {
 		for _, f := range cachedDoc.Fields {
 			val, exists := reqDoc.Fields[f.Key]
 			if f.Required && (!exists || val == "") {
-				c.JSON(400, gin.H{"error": f.Label + " is required.", "document_type_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
+				c.JSON(400, gin.H{"error": f.Label + " is required.", "document_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
 				return
 			}
 			if !exists || val == "" {
@@ -122,7 +102,7 @@ func SubmitDocuments(c *gin.Context) {
 			// required pattern check
 			if f.Pattern != "" {
 				if matched, _ := regexp.MatchString(f.Pattern, val); !matched {
-					c.JSON(400, gin.H{"error": "Please enter a valid " + f.Label + ".", "document_type_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
+					c.JSON(400, gin.H{"error": "Please enter a valid " + f.Label + ".", "document_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
 					return
 				}
 			}
@@ -131,11 +111,11 @@ func SubmitDocuments(c *gin.Context) {
 			if f.Type == "date" {
 				parsed, err := time.Parse("2006-01-02", val)
 				if err != nil {
-					c.JSON(400, gin.H{"error": "Enter a valid date in YYYY-MM-DD format.", "document_type_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
+					c.JSON(400, gin.H{"error": "Enter a valid date in YYYY-MM-DD format.", "document_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
 					return
 				}
 				if f.NotFuture && parsed.After(time.Now()) {
-					c.JSON(400, gin.H{"error": f.Label + " cannot be in the future.", "document_type_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
+					c.JSON(400, gin.H{"error": f.Label + " cannot be in the future.", "document_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
 					return
 				}
 			}
@@ -143,7 +123,7 @@ func SubmitDocuments(c *gin.Context) {
 	}
 
 	// Check that every required document is included.
-	for _, d := range format.DocumentTypes {
+	for _, d := range format.Documents {
 		if d.Required && !seen[d.DocumentTypeID] {
 			c.JSON(400, gin.H{"error": "required document missing: " + d.DocumentTypeID})
 			return
@@ -176,7 +156,7 @@ func SubmitDocuments(c *gin.Context) {
 	for _, doc := range req.Documents {
 		for k, v := range doc.Fields {
 			_, err = tx.Exec(ctx,
-				"INSERT INTO submission_values (submissionId, document_type_id, field_key, field_value) VALUES ($1, $2, $3, $4)",
+				"INSERT INTO submission_values (submissionId, document_id, field_key, field_value) VALUES ($1, $2, $3, $4)",
 				submissionId, doc.DocumentTypeID, k, v,
 			)
 			if err != nil {

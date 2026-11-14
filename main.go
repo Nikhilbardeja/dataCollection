@@ -2,9 +2,9 @@ package main
 
 import (
 	"dataCollection/internal/admin"
+	cache "dataCollection/internal/cache"
 	"dataCollection/internal/config"
 	"dataCollection/internal/user"
-	"dataCollection/internal/utils"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -17,7 +17,7 @@ func main() {
 
 	config.InitDB()
 
-	if err := utils.GetIMCache().LoadDocumentsFormat(); err != nil {
+	if err := cache.GetIMCache().LoadDocumentsFormat(); err != nil {
 		log.Fatalf("Failed to load cache: %v", err)
 	}
 	log.Println("Cache loaded")

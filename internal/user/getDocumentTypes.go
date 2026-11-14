@@ -1,13 +1,13 @@
 package user
 
 import (
-	"dataCollection/internal/utils"
+	"dataCollection/internal/cache"
 
 	"github.com/gin-gonic/gin"
 )
 
 func GetDocumentTypes(c *gin.Context) {
-	data := utils.GetIMCache().GetDocumentsFormat()
+	data := cache.GetIMCache().GetActiveDocumentsFormat()
 	if len(data) == 0 {
 		c.JSON(500, gin.H{"error": "cache not loaded"})
 		return

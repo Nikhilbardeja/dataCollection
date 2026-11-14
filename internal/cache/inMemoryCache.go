@@ -1,8 +1,9 @@
-package utils
+package cache
 
 import (
 	"context"
 	"dataCollection/internal/config"
+	user "dataCollection/internal/models"
 	"encoding/json"
 	"sync"
 	"time"
@@ -10,6 +11,7 @@ import (
 
 type inMemoryCache struct {
 	DocumentsFormat json.RawMessage
+	ActiveDocuments json.RawMessage
 	mu              sync.RWMutex
 }
 
@@ -35,9 +37,10 @@ func (imc *inMemoryCache) LoadDocumentsFormat() error {
             'documents',
             COALESCE(json_agg(
                 json_build_object(
-                    'document_type_id', dt.id,
+                    'document_id', dt.id,
                     'name', dt.name,
                     'required', dt.required,
+					'active', dt.active,
                     'fields', COALESCE((
                         SELECT json_agg(
                             json_build_object(
@@ -46,16 +49,17 @@ func (imc *inMemoryCache) LoadDocumentsFormat() error {
                                 'type', df.field_type,
                                 'required', df.required,
 								'pattern', df.pattern,
-								'not_future', df.not_future
+								'not_future', df.not_future,
+								'active', df.active
                             ) ORDER BY df.id
                         )
                         FROM document_fields df
-                        WHERE df.document_type_id = dt.id
+                        WHERE df.document_id = dt.id
                     ), '[]'::json)
                 ) ORDER BY dt.sort_order
             ), '[]'::json)
         )
-        FROM document_types dt
+        FROM documents dt
     `).Scan(&result)
 
 	if err != nil {
@@ -66,13 +70,61 @@ func (imc *inMemoryCache) LoadDocumentsFormat() error {
 	imc.mu.Lock()
 	defer imc.mu.Unlock()
 	imc.DocumentsFormat = result
+
+	active, err := buildActiveDocuments(result)
+	if err != nil {
+		return err
+	}
+	imc.ActiveDocuments = active
+
 	return nil
 }
 
-func (imc *inMemoryCache) GetDocumentsFormat() json.RawMessage {
+func buildActiveDocuments(raw json.RawMessage) (json.RawMessage, error) {
+	var wrapper user.DocsFormat
+
+	if err := json.Unmarshal(raw, &wrapper); err != nil {
+		return nil, err
+	}
+
+	activeDocs := make([]user.Docs, 0, len(wrapper.Documents))
+
+	for _, doc := range wrapper.Documents {
+		if doc.Active {
+			activeFields := make([]user.DocFields, 0, len(doc.Fields))
+
+			for _, field := range doc.Fields {
+				if field.Active {
+					activeFields = append(activeFields, field)
+				}
+			}
+
+			doc.Fields = activeFields
+
+			activeDocs = append(activeDocs, doc)
+
+		}
+	}
+
+	filtered := user.DocsFormat{Documents: activeDocs}
+
+	out, err := json.Marshal(filtered)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (imc *inMemoryCache) GetDocuments() json.RawMessage {
 	imc.mu.RLock()
 	defer imc.mu.RUnlock()
 	return imc.DocumentsFormat
+}
+
+func (imc *inMemoryCache) GetActiveDocumentsFormat() json.RawMessage {
+	imc.mu.RLock()
+	defer imc.mu.RUnlock()
+	return imc.ActiveDocuments
 }
 
 func (imc *inMemoryCache) Refresh() error {

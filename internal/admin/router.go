@@ -4,8 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const StaticPath = "./internal/user/static"
-const StaticURL = "/user/static"
+const StaticPath = "./internal/admin/static"
+const StaticURL = "/admin/static"
 
 func RegisterRoutesV1(rg *gin.RouterGroup) {
 
@@ -17,5 +17,12 @@ func RegisterRoutesV1(rg *gin.RouterGroup) {
 
 	{
 		public.GET("/get-data", getDataByDate)
+		public.GET("/", adminHome)
+		public.GET("/document-types", GetDocumentTypes)
+		public.POST("/add-document", addDocument)
+		public.PUT("/edit-document", editDocument)
+
+		public.POST("/add-field", addFiled)
+		public.PUT("/edit-field", editField)
 	}
 }

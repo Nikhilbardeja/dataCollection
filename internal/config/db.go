@@ -20,26 +20,26 @@ func InitDB() {
 		Settings.DBName,
 	)
 
-	// Pool ka config banaya
+	// Configure the connection pool.
 	pgxConfig, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		log.Fatalf("Failed to parse Postgres DSN: %v", err)
 	}
 
-	// Yahi wahi Max / Min wali setting hai jo humne baat ki thi
-	// Settings se aa rahi hai, to tu waha se hi badal payega
-	pgxConfig.MaxConns = int32(Settings.DBMaxOpenConnections) // Jaise 10
-	pgxConfig.MinConns = int32(Settings.DBMaxIdleConnections) // Jaise 2
-	pgxConfig.MaxConnLifetime = Settings.DBConnectionLifetime // Jaise 1 * time.Hour
+	// Apply the configured connection limits.
+	// These limits can be changed in the application settings.
+	pgxConfig.MaxConns = int32(Settings.DBMaxOpenConnections) // Example: 10
+	pgxConfig.MinConns = int32(Settings.DBMaxIdleConnections) // Example: 2
+	pgxConfig.MaxConnLifetime = Settings.DBConnectionLifetime // Example: 1 * time.Hour
 	pgxConfig.MaxConnIdleTime = 30 * time.Minute
 
-	// Ek baar pool bana diya, poore project me yahi chalega
+	// Create the shared connection pool.
 	DB, err = pgxpool.NewWithConfig(context.Background(), pgxConfig)
 	if err != nil {
 		log.Fatalf("Failed to create Postgres pool: %v", err)
 	}
 
-	// Check kar ki DB sach me connected hai ya nahi
+	// Verify the database connection.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
