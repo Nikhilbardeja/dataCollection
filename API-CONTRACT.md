@@ -12,7 +12,7 @@ Returns the cached configuration. The frontend expects:
 {
   "documents": [
     {
-      "document_id": "aadhaar",
+      "documentId": "aadhaar",
       "name": "Aadhaar",
       "required": true,
       "fields": [
@@ -33,7 +33,7 @@ The user supplies a phone number on each submission; there is no login or OTP. E
 {
   "phone": "9876543210",
   "documents": [
-    { "document_id": "aadhaar", "fields": { "name": "Example Name", "number": "123456789012", "dob": "1990-01-31" } }
+    { "documentId": "aadhaar", "fields": { "name": "Example Name", "number": "123456789012", "dob": "1990-01-31" } }
   ]
 }
 ```
@@ -41,7 +41,7 @@ The user supplies a phone number on each submission; there is no login or OTP. E
 The phone number is unverified and can be repeated across submissions. Successful responses contain `{ "status": "saved", "submissionId": 1 }`. Field validation failures return HTTP 400, for example:
 
 ```json
-{ "error": "Please enter a valid Aadhaar number.", "document_id": "aadhaar", "field_key": "number" }
+{ "error": "Please enter a valid Aadhaar number.", "documentId": "aadhaar", "field_key": "number" }
 ```
 
 A phone error returns `{ "error": "Enter a valid 10-digit phone number.", "field_key": "phone" }`. Other errors can return `{ "error": "..." }`. The user frontend displays errors beside their fields and presents a final review before submission. Photos remain in the browser; only text is sent.
@@ -58,7 +58,7 @@ Return a list including document display order and fields:
 {
   "documents": [
     {
-      "document_id": "aadhaar",
+      "documentId": "aadhaar",
       "name": "Aadhaar",
       "required": true,
       "sort_order": 1,
@@ -78,7 +78,7 @@ Use `documents: []` for an empty list. Fields are uniquely identified by their `
 { "id": "passport", "name": "Passport", "required": false, "sort_order": 3 }
 ```
 
-### `PUT /admin/document-types/{document_id}`
+### `PUT /admin/document-types/{documentId}`
 
 ```json
 { "name": "Passport", "required": false, "sort_order": 3 }
@@ -86,17 +86,17 @@ Use `documents: []` for an empty list. Fields are uniquely identified by their `
 
 Document IDs are immutable in the UI. ID rules: lowercase letter first, followed by lowercase letters, numbers, underscores, or hyphens; maximum 50 characters. Return `409` for duplicates or conflicts.
 
-### `DELETE /admin/document-types/{document_id}`
+### `DELETE /admin/document-types/{documentId}`
 
-No request body. A document may be referenced by existing submissions (`submission_values.document_id` has a foreign key). Do not silently delete historical submissions; reject with `409` and a useful error when referenced, or design an explicit archival policy. Fields cascade according to the current schema when a document is deleted.
+No request body. A document may be referenced by existing submissions (`submission_values.documentId` has a foreign key). Do not silently delete historical submissions; reject with `409` and a useful error when referenced, or design an explicit archival policy. Fields cascade according to the current schema when a document is deleted.
 
-### `POST /admin/document-types/{document_id}/fields`
+### `POST /admin/document-types/{documentId}/fields`
 
 ```json
 { "key": "dob", "label": "Date of birth", "type": "date", "required": true, "pattern": null, "not_future": true }
 ```
 
-### `PUT /admin/document-types/{document_id}/fields/{field_key}`
+### `PUT /admin/document-types/{documentId}/fields/{field_key}`
 
 ```json
 { "label": "Date of birth", "type": "date", "required": true, "pattern": null, "not_future": true }
@@ -104,7 +104,7 @@ No request body. A document may be referenced by existing submissions (`submissi
 
 Field keys are immutable in the UI. Key rules: lowercase letter first, followed by lowercase letters, numbers, or underscores; maximum 50 characters. Supported types: `text`, `date`. `not_future` only applies to dates. `pattern` is nullable and should be checked for validity server-side. Patterns should use syntax supported by both Go and JavaScript, since both user frontend and backend validate them.
 
-### `DELETE /admin/document-types/{document_id}/fields/{field_key}`
+### `DELETE /admin/document-types/{documentId}/fields/{field_key}`
 
 No request body. Define how previously submitted values are retained and displayed before allowing deletion. The current schema stores field keys as text in historical submission values, so removing a field can leave historical values without a current label; reject or archive as appropriate.
 

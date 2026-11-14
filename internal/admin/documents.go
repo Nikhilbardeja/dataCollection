@@ -7,10 +7,10 @@ import (
 )
 
 type documentBody struct {
-	DocumentId string `json:"document_id" binding:"required"`
+	DocumentId string `json:"documentId" binding:"required"`
 	Name       string `json:"name" binding:"required"`
-	Required   bool   `json:"required" binding:"required"`
-	SortOrder  int    `json:"sort_order" binding:"required"`
+	Required   *bool  `json:"required" binding:"required"`
+	SortOrder  *int   `json:"sort_order" binding:"required"`
 	Active     bool   `json:"active"`
 }
 

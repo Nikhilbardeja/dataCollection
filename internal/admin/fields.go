@@ -7,7 +7,7 @@ import (
 )
 
 type fieldBody struct {
-	DocumentId string  `json:"document_id"`
+	DocumentId string  `json:"documentId"`
 	Key        string  `json:"key"`
 	Label      string  `json:"label"`
 	Type       string  `json:"type"`
@@ -25,8 +25,8 @@ func addFiled(c *gin.Context) {
 	}
 
 	tag, err := config.DB.Exec(c.Request.Context(),
-		"INSERT INTO document_fields(document_id, field_key, label, field_type, required, pattern, not_future) VALUES ($1, $2, $3, $4, $5, $6)",
-		field.Key, field.Label, field.Type, field.Required, field.Pattern, field.NotFuture)
+		"INSERT INTO document_fields(documentId, field_key, label, field_type, required, pattern, not_future, active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+		field.DocumentId, field.Key, field.Label, field.Type, field.Required, field.Pattern, field.NotFuture, field.Active)
 
 	if err != nil || tag.RowsAffected() == 0 {
 		c.JSON(500, gin.H{"error": "Unable to save field."})
@@ -46,8 +46,8 @@ func editField(c *gin.Context) {
 	}
 
 	tag, err := config.DB.Exec(c.Request.Context(),
-		"UPDATE documents SET label = $1, field_type = $2, required = $3, pattern = $4, not_future = $5, active = $6 WHERE id = $7",
-		field.Label, field.Type, field.Required, field.Pattern, field.NotFuture, field.Active, field.DocumentId)
+		"UPDATE document_fields SET label = $1, field_type = $2, required = $3, pattern = $4, not_future = $5, active = $6 WHERE documentId = $7 AND key = $8",
+		field.Label, field.Type, field.Required, field.Pattern, field.NotFuture, field.Active, field.DocumentId, field.Key)
 
 	if err != nil || tag.RowsAffected() == 0 {
 		c.JSON(500, gin.H{"error": "Unable to edit the field."})

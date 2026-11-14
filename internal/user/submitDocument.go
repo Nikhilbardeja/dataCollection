@@ -15,8 +15,8 @@ import (
 
 // Submission payload received from the frontend.
 type SubmitDoc struct {
-	DocumentTypeID string            `json:"document_id"`
-	Fields         map[string]string `json:"fields"`
+	DocumentId string            `json:"documentId"`
+	Fields     map[string]string `json:"fields"`
 }
 
 type SubmitRequest struct {
@@ -56,22 +56,22 @@ func SubmitDocuments(c *gin.Context) {
 		// Check whether the document type is configured.
 		var cachedDoc *models.Docs
 		for i := range format.Documents {
-			if format.Documents[i].DocumentTypeID == reqDoc.DocumentTypeID {
+			if format.Documents[i].DocumentId == reqDoc.DocumentId {
 				cachedDoc = &format.Documents[i]
 				break
 			}
 		}
 		if cachedDoc == nil {
-			c.JSON(400, gin.H{"error": "unknown document: " + reqDoc.DocumentTypeID})
+			c.JSON(400, gin.H{"error": "unknown document: " + reqDoc.DocumentId})
 			return
 		}
 
 		// Reject duplicate document types.
-		if seen[reqDoc.DocumentTypeID] {
-			c.JSON(400, gin.H{"error": "duplicate document: " + reqDoc.DocumentTypeID})
+		if seen[reqDoc.DocumentId] {
+			c.JSON(400, gin.H{"error": "duplicate document: " + reqDoc.DocumentId})
 			return
 		}
-		seen[reqDoc.DocumentTypeID] = true
+		seen[reqDoc.DocumentId] = true
 
 		// Reject unknown fields.
 		for k := range reqDoc.Fields {
@@ -83,7 +83,7 @@ func SubmitDocuments(c *gin.Context) {
 				}
 			}
 			if !found {
-				c.JSON(400, gin.H{"error": "Unknown field: " + k, "document_id": cachedDoc.DocumentTypeID, "field_key": k})
+				c.JSON(400, gin.H{"error": "Unknown field: " + k, "documentId": cachedDoc.DocumentId, "field_key": k})
 				return
 			}
 		}
@@ -92,7 +92,7 @@ func SubmitDocuments(c *gin.Context) {
 		for _, f := range cachedDoc.Fields {
 			val, exists := reqDoc.Fields[f.Key]
 			if f.Required && (!exists || val == "") {
-				c.JSON(400, gin.H{"error": f.Label + " is required.", "document_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
+				c.JSON(400, gin.H{"error": f.Label + " is required.", "documentId": cachedDoc.DocumentId, "field_key": f.Key})
 				return
 			}
 			if !exists || val == "" {
@@ -102,7 +102,7 @@ func SubmitDocuments(c *gin.Context) {
 			// required pattern check
 			if f.Pattern != "" {
 				if matched, _ := regexp.MatchString(f.Pattern, val); !matched {
-					c.JSON(400, gin.H{"error": "Please enter a valid " + f.Label + ".", "document_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
+					c.JSON(400, gin.H{"error": "Please enter a valid " + f.Label + ".", "documentId": cachedDoc.DocumentId, "field_key": f.Key})
 					return
 				}
 			}
@@ -111,11 +111,11 @@ func SubmitDocuments(c *gin.Context) {
 			if f.Type == "date" {
 				parsed, err := time.Parse("2006-01-02", val)
 				if err != nil {
-					c.JSON(400, gin.H{"error": "Enter a valid date in YYYY-MM-DD format.", "document_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
+					c.JSON(400, gin.H{"error": "Enter a valid date in YYYY-MM-DD format.", "documentId": cachedDoc.DocumentId, "field_key": f.Key})
 					return
 				}
 				if f.NotFuture && parsed.After(time.Now()) {
-					c.JSON(400, gin.H{"error": f.Label + " cannot be in the future.", "document_id": cachedDoc.DocumentTypeID, "field_key": f.Key})
+					c.JSON(400, gin.H{"error": f.Label + " cannot be in the future.", "documentId": cachedDoc.DocumentId, "field_key": f.Key})
 					return
 				}
 			}
@@ -124,8 +124,8 @@ func SubmitDocuments(c *gin.Context) {
 
 	// Check that every required document is included.
 	for _, d := range format.Documents {
-		if d.Required && !seen[d.DocumentTypeID] {
-			c.JSON(400, gin.H{"error": "required document missing: " + d.DocumentTypeID})
+		if d.Required && !seen[d.DocumentId] {
+			c.JSON(400, gin.H{"error": "required document missing: " + d.DocumentId})
 			return
 		}
 	}
@@ -156,8 +156,8 @@ func SubmitDocuments(c *gin.Context) {
 	for _, doc := range req.Documents {
 		for k, v := range doc.Fields {
 			_, err = tx.Exec(ctx,
-				"INSERT INTO submission_values (submissionId, document_id, field_key, field_value) VALUES ($1, $2, $3, $4)",
-				submissionId, doc.DocumentTypeID, k, v,
+				"INSERT INTO submission_values (submissionId, documentId, field_key, field_value) VALUES ($1, $2, $3, $4)",
+				submissionId, doc.DocumentId, k, v,
 			)
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Unable to save submission"})

@@ -37,10 +37,11 @@ func (imc *inMemoryCache) LoadDocumentsFormat() error {
             'documents',
             COALESCE(json_agg(
                 json_build_object(
-                    'document_id', dt.id,
+                    'documentId', dt.documentId,
                     'name', dt.name,
                     'required', dt.required,
 					'active', dt.active,
+					'sort_order', dt.sort_order,
                     'fields', COALESCE((
                         SELECT json_agg(
                             json_build_object(
@@ -54,7 +55,7 @@ func (imc *inMemoryCache) LoadDocumentsFormat() error {
                             ) ORDER BY df.id
                         )
                         FROM document_fields df
-                        WHERE df.document_id = dt.id
+                        WHERE df.documentId = dt.documentId
                     ), '[]'::json)
                 ) ORDER BY dt.sort_order
             ), '[]'::json)

@@ -38,16 +38,16 @@ func getDataByDate(c *gin.Context) {
 						'documents', COALESCE((
 							SELECT json_agg(
 								json_build_object(
-									'document_id', d.document_id,
+									'documentId', d.documentId,
 									'fields', d.fields
 								)
 							)
 							FROM (
-								SELECT document_id,
+								SELECT documentId,
 									   json_object_agg(field_key, field_value) AS fields
 								FROM submission_values
 								WHERE submissionId = s.submissionId
-								GROUP BY document_id
+								GROUP BY documentId
 							) d
 						), '[]'::json)
 					)

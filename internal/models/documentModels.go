@@ -12,11 +12,11 @@ type DocFields struct {
 }
 
 type Docs struct {
-	DocumentTypeID string      `json:"id"`
-	Name           string      `json:"name"`
-	Required       bool        `json:"required"`
-	Fields         []DocFields `json:"fields"`
-	Active         bool        `json:"active"`
+	DocumentId string      `json:"documentId"`
+	Name       string      `json:"name"`
+	Required   bool        `json:"required"`
+	Fields     []DocFields `json:"fields"`
+	Active     bool        `json:"active"`
 }
 
 type DocsFormat struct {
