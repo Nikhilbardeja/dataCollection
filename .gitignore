@@ -1,2 +1,4 @@
 .env
 docker-compose.ymlschema.sql
+
+schema-data.sql
