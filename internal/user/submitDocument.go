@@ -37,7 +37,7 @@ func SubmitDocuments(c *gin.Context) {
 	}
 
 	// Load the document configuration from the cache.
-	requiredFormat := utils.GetIMCache().GetDocuments()
+	requiredFormat := utils.GetIMCache().GetActiveDocumentsFormat()
 	if len(requiredFormat) == 0 {
 		c.JSON(500, gin.H{"error": "Internal server error"})
 		return

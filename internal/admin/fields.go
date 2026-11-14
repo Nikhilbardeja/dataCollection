@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"dataCollection/internal/cache"
 	"dataCollection/internal/config"
 
 	"github.com/gin-gonic/gin"
@@ -33,6 +34,9 @@ func addFiled(c *gin.Context) {
 		return
 	}
 
+	// must refresh the cache to reflect the changes on server
+	cache.GetIMCache().Refresh()
+
 	c.JSON(201, gin.H{
 		"message": "Field saved",
 	})
@@ -46,13 +50,16 @@ func editField(c *gin.Context) {
 	}
 
 	tag, err := config.DB.Exec(c.Request.Context(),
-		"UPDATE document_fields SET label = $1, field_type = $2, required = $3, pattern = $4, not_future = $5, active = $6 WHERE documentId = $7 AND key = $8",
+		"UPDATE document_fields SET label = $1, field_type = $2, required = $3, pattern = $4, not_future = $5, active = $6 WHERE documentId = $7 AND field_key = $8",
 		field.Label, field.Type, field.Required, field.Pattern, field.NotFuture, field.Active, field.DocumentId, field.Key)
 
 	if err != nil || tag.RowsAffected() == 0 {
 		c.JSON(500, gin.H{"error": "Unable to edit the field."})
 		return
 	}
+
+	// must refresh the cache to reflect the changes on server
+	cache.GetIMCache().Refresh()
 
 	c.JSON(201, gin.H{
 		"message": "Field edited",

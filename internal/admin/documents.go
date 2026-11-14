@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"dataCollection/internal/cache"
 	"dataCollection/internal/config"
 
 	"github.com/gin-gonic/gin"
@@ -22,13 +23,15 @@ func addDocument(c *gin.Context) {
 	}
 
 	tag, err := config.DB.Exec(c.Request.Context(),
-		"INSERT INTO documents(id, name, required, sort_order, active) VALUES ($1, $2, $3, $4, $5)",
+		"INSERT INTO documents(documentId, name, required, sort_order, active) VALUES ($1, $2, $3, $4, $5)",
 		doc.DocumentId, doc.Name, doc.Required, doc.SortOrder, doc.Active)
 
 	if err != nil || tag.RowsAffected() == 0 {
 		c.JSON(500, gin.H{"error": "Unable to save document"})
 		return
 	}
+	// must refresh the cache to reflect the changes on server
+	cache.GetIMCache().Refresh()
 
 	c.JSON(201, gin.H{
 		"message": "Document saved",
@@ -43,13 +46,16 @@ func editDocument(c *gin.Context) {
 	}
 
 	tag, err := config.DB.Exec(c.Request.Context(),
-		"UPDATE documents SET name = $1, required = $2, sort_order = $3, active = $4 WHERE id = $5",
+		"UPDATE documents SET name = $1, required = $2, sort_order = $3, active = $4 WHERE documentId = $5",
 		doc.Name, doc.Required, doc.SortOrder, doc.Active, doc.DocumentId)
 
 	if err != nil || tag.RowsAffected() == 0 {
 		c.JSON(500, gin.H{"error": "Unable to edit the document."})
 		return
 	}
+
+	// must refresh the cache to reflect the changes on server
+	cache.GetIMCache().Refresh()
 
 	c.JSON(201, gin.H{
 		"message": "Document edited",
