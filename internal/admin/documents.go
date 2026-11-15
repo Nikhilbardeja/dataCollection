@@ -3,6 +3,7 @@ package admin
 import (
 	"dataCollection/internal/cache"
 	"dataCollection/internal/config"
+	"log"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,10 +32,19 @@ func addDocument(c *gin.Context) {
 		return
 	}
 	// must refresh the cache to reflect the changes on server
-	cache.GetIMCache().Refresh()
+	if err := cache.GetIMCache().Refresh(); err != nil {
+		log.Printf("Cache refresh failed after saving document: %v", err)
+
+		c.JSON(200, gin.H{
+			"message":         "Document saved, but the updated settings may not appear immediately.",
+			"cache_refreshed": false,
+		})
+		return
+	}
 
 	c.JSON(201, gin.H{
-		"message": "Document saved",
+		"message":         "Document saved",
+		"cache_refreshed": true,
 	})
 }
 
@@ -55,9 +65,18 @@ func editDocument(c *gin.Context) {
 	}
 
 	// must refresh the cache to reflect the changes on server
-	cache.GetIMCache().Refresh()
+	if err := cache.GetIMCache().Refresh(); err != nil {
+		log.Printf("Cache refresh failed after saving document: %v", err)
+
+		c.JSON(200, gin.H{
+			"message":         "Document saved, but the updated settings may not appear immediately.",
+			"cache_refreshed": false,
+		})
+		return
+	}
 
 	c.JSON(201, gin.H{
-		"message": "Document edited",
+		"message":         "Document edited",
+		"cache_refreshed": true,
 	})
 }
