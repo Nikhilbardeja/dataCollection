@@ -14,15 +14,22 @@ func RegisterRoutesV1(rg *gin.RouterGroup) {
 	userGroup.Static("/static", StaticPath)
 
 	public := userGroup.Group("/")
+	private := userGroup.Group("/")
+
+	private.Use(loginRequired())
 
 	{
-		public.GET("/get-data", getDataByDate)
-		public.GET("/", adminHome)
-		public.GET("/document-types", GetDocumentTypes)
-		public.POST("/add-document", addDocument)
-		public.PUT("/edit-document", editDocument)
+		public.GET("/login", login)
 
-		public.POST("/add-field", addFiled)
-		public.PUT("/edit-field", editField)
+	}
+	{
+		private.GET("/get-data", getDataByDate)
+		private.GET("/", adminHome)
+		private.GET("/document-types", GetDocumentTypes)
+		private.POST("/add-document", addDocument)
+		private.PUT("/edit-document", editDocument)
+
+		private.POST("/add-field", addFiled)
+		private.PUT("/edit-field", editField)
 	}
 }

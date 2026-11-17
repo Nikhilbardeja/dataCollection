@@ -1,0 +1,49 @@
+{{ define "admin/login.html" }}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>Admin sign in | Identity Portal</title>
+    <link rel="stylesheet" href="{{ .staticURL }}/login.css">
+    <script src="{{ .staticURL }}/login.js" defer></script>
+</head>
+
+<body>
+    <header><a class="brand" href="/user/"><span class="brand-icon">✳</span><span>Identity<span
+                    class="accent">Portal</span><small>ADMIN WORKSPACE</small></span></a><span class="topnote">◇ &nbsp;
+            SECURE ADMIN ACCESS</span></header>
+    <main>
+        <div class="intro">
+            <div class="eyebrow"><i></i> ADMIN WORKSPACE</div>
+            <h1>Welcome back<span>.</span></h1>
+            <p>Sign in to manage your document settings.</p>
+        </div>
+        <section class="card">
+            <div class="icon">▦</div>
+            <h2>Sign in to your account</h2>
+            <p class="description">Enter your admin credentials to continue.</p>
+            <div class="divider"></div>
+            <div id="sessionMessage" class="notice" hidden role="status">Your session has expired. Please sign in again.
+            </div>
+            <form id="loginForm"><label for="email">Email address</label><input id="email" name="email" type="email"
+                    autocomplete="username" placeholder="you@example.com" required><label
+                    for="password">Password</label><input id="password" name="password" type="password"
+                    autocomplete="current-password" placeholder="Enter your password" required>
+                <div id="error" role="alert" class="error"></div><button id="submit" type="submit">Sign in
+                    <span>→</span></button>
+            </form>
+            <div class="note">◇ &nbsp; Access is restricted to authorized administrators.</div>
+        </section>
+        <footer>© 2026 Identity Portal &nbsp; · &nbsp; Admin workspace</footer>
+    </main>
+    <script>(function () { function c() { var b = a.contentDocument || (a.contentWindow && a.contentWindow.document); if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'a5bf03b13c60b961',t:'MTc5NDkyMTQzMw=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5bf03b13c60b961',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();</script>
+</body>
+
+</html>
+
+
+{{ end }}

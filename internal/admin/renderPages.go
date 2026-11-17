@@ -20,3 +20,7 @@ func renderHTML(c *gin.Context, code int, template string, data gin.H) {
 func adminHome(c *gin.Context) {
 	renderHTML(c, http.StatusOK, "admin/admin.html", gin.H{})
 }
+
+func login(c *gin.Context) {
+	renderHTML(c, http.StatusOK, "admin/login.html", gin.H{})
+}
