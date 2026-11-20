@@ -25,8 +25,8 @@
         </aside>
         <main>
             <header>
-                <div class="breadcrumb">Admin <span>/</span> <strong>Document settings</strong></div><span
-                    class="header-note">◇ &nbsp; ADMIN WORKSPACE</span>
+                <div class="breadcrumb">Admin <span>/</span> <strong>Document settings</strong></div>
+                <div class="header-actions"><span class="header-note">◇ &nbsp; ADMIN WORKSPACE</span><div class="logout-control"><button type="button" class="logout-button" id="logoutButton" aria-describedby="logoutError">Log out</button><div id="logoutError" class="logout-error" role="alert" hidden></div></div></div>
             </header>
             <div class="container">
                 <div class="heading">
@@ -38,10 +38,10 @@
                 </div>
                 <div class="notice"><span>ⓘ</span>
                     <div><b>Keep your forms up to date</b>
-                        <p>Configure required documents, field labels, and validation rules. Changes will apply after
-                            the backend is connected.</p>
+                        <p>Configure documents and fields with active or inactive status. Saved changes may not appear until the server cache is refreshed.</p>
                     </div>
                 </div>
+                <div id="saveNotice" class="save-notice" role="status" hidden></div>
                 <div class="section-title">
                     <div>
                         <h2>Document types</h2>

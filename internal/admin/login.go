@@ -77,7 +77,7 @@ func loginApi(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("sessionId", sessionId, 3600*24, "/", "", false, true)
+	c.SetCookie("sessionId", sessionId, 3600*24, "/", "", config.Settings.CookieSecure, config.Settings.CookieHttpOnly)
 	cache.GetIMCache().SetAdminSession(sessionId, admin.AdminID, admin.Role, expiresAt)
 	c.JSON(200, gin.H{"message": "login success"})
 
@@ -124,4 +124,38 @@ func rejectUnauthenticated(c *gin.Context) {
 	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 		"error": "Login required",
 	})
+}
+
+func logout(c *gin.Context) {
+	sessionID, err := c.Cookie("sessionId")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Login required",
+		})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Minute)
+	defer cancel()
+
+	// First revoke the session in the database.
+	_, err = config.DB.Exec(
+		ctx,
+		`DELETE FROM admin_sessions WHERE sessionId = $1`,
+		sessionID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Unable to log out. Please try again.",
+		})
+		return
+	}
+
+	// Then remove it from this server's cache.
+	cache.GetIMCache().DeleteAdminSession(sessionID)
+
+	// Clear the cookie using the same path and domain as login.
+	c.SetCookie("sessionId", "", -1, "/", "", config.Settings.CookieSecure, config.Settings.CookieHttpOnly)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Logged out"})
 }

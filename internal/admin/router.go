@@ -32,5 +32,7 @@ func RegisterRoutesV1(rg *gin.RouterGroup) {
 
 		private.POST("/add-field", addFiled)
 		private.PUT("/edit-field", editField)
+
+		private.POST("/logout", logout)
 	}
 }

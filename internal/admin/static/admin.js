@@ -136,5 +136,28 @@ function fieldForm(doc, field = null) {
     }
   };
 }
+// Keep the page open on failure: a failed request does not prove the session was revoked.
+document.getElementById('logoutButton').onclick = async event => {
+  const button = event.currentTarget;
+  const error = document.getElementById('logoutError');
+  button.disabled = true;
+  button.textContent = 'Logging out…';
+  error.hidden = true;
+  error.textContent = '';
+  try {
+    const response = await fetch(API + '/logout', { method: 'POST', credentials: 'same-origin' });
+    if (response.ok || response.status === 401) {
+      window.location.replace(API + '/login');
+      return;
+    }
+    let body = {}; try { body = await response.json(); } catch { }
+    error.textContent = (typeof body.error === 'string' && body.error) || 'Could not log out. Please try again.';
+  } catch {
+    error.textContent = 'Unable to reach the server. Please try again.';
+  }
+  error.hidden = false;
+  button.disabled = false;
+  button.textContent = 'Log out';
+};
 document.getElementById('addDocument').onclick = () => documentForm();
 loadDocuments();
