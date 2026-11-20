@@ -30,6 +30,10 @@ type AppConfig struct {
 	CookieSecure   bool
 	CookieSameSite string
 	CookieHttpOnly bool
+
+	CSRFAuthKey string
+
+	Development bool
 }
 
 var Settings AppConfig
@@ -54,6 +58,8 @@ func Load() error {
 	Settings.CookieSecure = os.Getenv("COOKIE_SECURE") == "true"
 	Settings.CookieSameSite = os.Getenv("COOKIE_SAME_SITE")
 	Settings.CookieHttpOnly = os.Getenv("COOKIE_HTTP_ONLY") == "true"
+	Settings.CSRFAuthKey = os.Getenv("CSRF_AUTH_KEY")
+	Settings.Development = os.Getenv("DEVELOPMENT") == "true"
 	return nil
 
 }

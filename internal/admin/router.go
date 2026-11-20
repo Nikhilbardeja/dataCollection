@@ -1,7 +1,10 @@
 package admin
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/csrf"
 )
 
 const StaticPath = "./internal/admin/static"
@@ -21,6 +24,12 @@ func RegisterRoutesV1(rg *gin.RouterGroup) {
 	{
 		public.GET("/login", login)
 		public.POST("/login", loginApi)
+		public.GET("/csrf", func(c *gin.Context) {
+			c.Header("Cache-Control", "no-store")
+			c.JSON(http.StatusOK, gin.H{
+				"csrfToken": csrf.Token(c.Request),
+			})
+		})
 
 	}
 	{

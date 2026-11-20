@@ -7,10 +7,17 @@ let documents = [], selected = null, opener = null;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 async function request(url, method = 'GET', payload) {
   let response;
-  try {
-    response = await fetch(url, { method, credentials: 'same-origin', headers: payload === undefined ? {} : { 'Content-Type': 'application/json' }, ...(payload === undefined ? {} : { body: JSON.stringify(payload) }) });
+  const headers = payload === undefined ? {} : { 'Content-Type': 'application/json' };
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) {
+    try { headers['X-CSRF-Token'] = await getCsrfToken(); }
+    catch (error) {
+      if (error.status === 401) window.location.replace(API + '/login');
+      throw error;
+    }
   }
-  catch {
+  try {
+    response = await fetch(url, { method, credentials: 'same-origin', headers, ...(payload === undefined ? {} : { body: JSON.stringify(payload) }) });
+  } catch {
     throw new Error('Unable to reach the server. Please try again.');
   }
   if (response.status === 401) {
@@ -145,15 +152,17 @@ document.getElementById('logoutButton').onclick = async event => {
   error.hidden = true;
   error.textContent = '';
   try {
-    const response = await fetch(API + '/logout', { method: 'POST', credentials: 'same-origin' });
+    const token = await getCsrfToken();
+    const response = await fetch(API + '/logout', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-Token': token } });
     if (response.ok || response.status === 401) {
       window.location.replace(API + '/login');
       return;
     }
-    let body = {}; try { body = await response.json(); } catch { }
+    let body = {}; try { body = await response.json(); } catch {}
     error.textContent = (typeof body.error === 'string' && body.error) || 'Could not log out. Please try again.';
-  } catch {
-    error.textContent = 'Unable to reach the server. Please try again.';
+  } catch (err) {
+    if (err.status === 401) { window.location.replace(API + '/login'); return; }
+    error.textContent = err.message || 'Unable to reach the server. Please try again.';
   }
   error.hidden = false;
   button.disabled = false;

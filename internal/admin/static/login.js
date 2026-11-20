@@ -12,7 +12,8 @@ form.addEventListener('submit', async event => {
     button.disabled = true;
     button.textContent = 'Signing in…';
     try {
-        const response = await fetch(API + '/login', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+        const token = await getCsrfToken();
+        const response = await fetch(API + '/login', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token }, body: JSON.stringify({ email, password }) });
         if (response.status === 401) {
             error.textContent = 'Incorrect email or password. Please try again.';
             return;
@@ -27,8 +28,8 @@ form.addEventListener('submit', async event => {
         }
         document.getElementById('password').value = '';
         location.replace(API + '/');
-    } catch {
-        error.textContent = 'Cannot reach the server. Please check your connection and try again.';
+    } catch (err) {
+        error.textContent = err.message || 'Cannot reach the server. Please check your connection and try again.';
     }
     finally {
         button.disabled = false;
