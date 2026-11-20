@@ -29,6 +29,7 @@ type AppConfig struct {
 	CookieDomain   string
 	CookieSecure   bool
 	CookieSameSite string
+	CookieHttpOnly bool
 }
 
 var Settings AppConfig
@@ -52,6 +53,7 @@ func Load() error {
 	Settings.CookieDomain = os.Getenv("COOKIE_DOMAIN")
 	Settings.CookieSecure = os.Getenv("COOKIE_SECURE") == "true"
 	Settings.CookieSameSite = os.Getenv("COOKIE_SAME_SITE")
+	Settings.CookieHttpOnly = os.Getenv("COOKIE_HTTP_ONLY") == "true"
 	return nil
 
 }
