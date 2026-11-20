@@ -94,14 +94,14 @@ func loginRequired() gin.HandlerFunc {
 		sessionId, err := ctx.Cookie("sessionId")
 
 		if err != nil {
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Login Required"})
+			rejectUnauthenticated(ctx)
 			return
 		}
 
 		adminSession, adminExists := cache.GetIMCache().GetAdminSessionById(sessionId)
 
 		if !adminExists {
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Login Required"})
+			rejectUnauthenticated(ctx)
 			return
 		}
 
@@ -111,4 +111,17 @@ func loginRequired() gin.HandlerFunc {
 		ctx.Next()
 
 	}
+}
+
+func rejectUnauthenticated(c *gin.Context) {
+	if c.Request.Method == http.MethodGet &&
+		c.Request.URL.Path == "/admin/" {
+		c.Redirect(http.StatusSeeOther, "/admin/login")
+		c.Abort()
+		return
+	}
+
+	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+		"error": "Login required",
+	})
 }

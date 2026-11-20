@@ -86,7 +86,7 @@ func (imc *inMemoryCache) GetAdminSessionById(sessionID string) (AdminSession, b
 		`SELECT s.adminId, a.role, s.expires_at
 		 FROM admin_sessions s
 		 JOIN admins a ON a.adminId = s.adminId
-		 WHERE s.session_id = $1 AND s.expires_at > NOW()`,
+		 WHERE s.sessionId = $1 AND s.expires_at > NOW()`,
 		sessionID,
 	).Scan(&sess.AdminID, &sess.Role, &sess.ExpiresAt)
 

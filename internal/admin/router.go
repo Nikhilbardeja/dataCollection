@@ -20,6 +20,7 @@ func RegisterRoutesV1(rg *gin.RouterGroup) {
 
 	{
 		public.GET("/login", login)
+		public.POST("/login", loginApi)
 
 	}
 	{
